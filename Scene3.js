@@ -1,36 +1,36 @@
 class Scene3 extends Phaser.Scene {
 
-    init (data)
-    {try{
-        if (data.scoreSettings != null){
-            this.scoreSettingdata = data.scoreSettings;
-        }
-        if (data.level != null){
-            this.levelData = data.level;
-        }
+    init(data) {
+        try {
+            if (data.scoreSettings !== null) {
+                this.scoreSettingdata = data.scoreSettings;
+            }
+            if (data.level !== null) {
+                this.levelData = data.level;
+            }
 
-        if (data.stage != null) {
-            this.stageData = data.stage;
+            if (data.stage !== null) {
+                this.stageData = data.stage;
+            }
+            if (data.missile !== null) {
+                this.missiledata = data.missile;
+            }
+        } catch (err) {
+            console.log(err);
         }
-        if(data.missile != null){
-            this.missiledata = data.missile;
-        }
-    }catch(err){
-console.log(err);
     }
-      }
 
     constructor(config) {
         super('newGame');
     }
 
-    preload(){
-
-        
+    preload() {
 
 
-        
-        var musicConfig ={
+
+
+
+        var musicConfig = {
             mute: false,
             volume: 1,
             rate: 1,
@@ -40,43 +40,44 @@ console.log(err);
             delay: 0
         }
 
-        
 
 
-        
+
+
         this.stageMusic = this.sound.add('stage', musicConfig);
         this.stageMusic.play();
     }
 
 
     create() {
-        
+
 
         this.background = this.add.tileSprite(0, 0, config.width, config.height, "stage1Screen");
 
         this.background.setOrigin(0, 0);
-        
+
         this.spawnPlayer();
-        this.powerup = null;
+        this.powerup = 0;
+        this.missileObject;;
 
         this.createText();
 
-        if (this.levelData == null || this.levelData == undefined){
+        if (this.levelData == null || this.levelData == undefined) {
             this.level = 1;
-        }else{
+        } else {
             this.level = this.levelData;
         }
-        
 
-        if (this.stagedata == null || this.stagedata == undefined){
+
+        if (this.stagedata == null || this.stagedata == undefined) {
             this.stage = 1;
-        }else{
+        } else {
             this.stage = this.stageData;
         }
 
-        if (this.missiledata == null || this.missiledata == undefined){
+        if (this.missiledata == null || this.missiledata == undefined) {
             this.player.missiles = 0;
-        }else{
+        } else {
             this.player.missiles = this.missiledata;
         }
 
@@ -85,6 +86,7 @@ console.log(err);
         this.enemyDeathSound = this.sound.add("enemyDeath");
         this.spaceshipSound = this.sound.add("spaceshipAlert");
         this.powerupSound = this.sound.add("powerup");
+        this.bigExplosionSound = this.sound.add("bigExplosion");
 
         //player spawn
         //this.player = this.physics.add.sprite(config.width / 2 - 8, config.height - 64, "player");
@@ -102,14 +104,19 @@ console.log(err);
   */
         //this.enemies.add(this.enemy1);
 
-        
 
-      /*   this.shots = this.physics.add.group({
-            maxSize: 20,
-            classType: Shot,
-            runChildUpdate: true
-        }); */
+
+        /*   this.shots = this.physics.add.group({
+              maxSize: 20,
+              classType: Shot,
+              runChildUpdate: true
+          }); */
         this.shots = new Shots(this);
+
+        this.completeMissile = this.physics.add.group({
+            maxSize:5000,
+            runchildUpdate: true
+        })
 
         this.bombs = this.physics.add.group({
             maxSize: 5000,
@@ -121,13 +128,20 @@ console.log(err);
         this.alienSettings = new AlienSettings(this, this.level);
 
         this.scoreSettings = new ScoreSettings(this);
-        if (this.scoreSettings.score != 0){
-            this.scoreSettings = this.scoreSettingdata;
-        }
+         if (typeof this.scoreSettingdata !== "undefined") {
+            this.scoreSettings = new RetrieveScoreSettings(this, this.scoreSettingdata);
+            this.scoreSettings.print();
+        }  
         this.scoreSettings.print();
         this.state = 'stateRunning';
 
+        
         this.missileDisplay = new MissileDisplay(this);
+
+        if(typeof this.missiledata !== "undefined"){
+            this.missileDisplay = new MissileDisplayCarryOver(this, this.missiledata);
+            this.missileDisplay.print();
+        }
         this.missileDisplay.print();
 
 
@@ -154,11 +168,23 @@ console.log(err);
 
 
         this.physics.world.on('worldbounds', this.onWorldbounds, this);
-        
-        
+
+
         this.alienSettings.addColider(this.shots, this.hitEnemy, this);
         this.alienSettings.addColider(this.player, this.enemyContact, this);
+        
         this.physics.add.collider(this.bombs, this.player, this.bombHitEvent, null, this);
+        
+        this.alienSettings.addColider(this.completeMissile, this.missileExplode, this);
+
+        
+        
+
+        //this.missileObject = this.createMissile();
+
+
+
+
 
         //this.player.play("ship_1_idle");
         //this.player.setInteractive();
@@ -171,9 +197,11 @@ console.log(err);
 
         //this.createEnemies();
         this.spawnSpaceShip();
+        
 
-        this.delay = Phaser.Math.Between(10000,16000);
+        this.delay = Phaser.Math.Between(10000, 16000);
     }
+
 
     createText() {
         const sizeY = this.game.canvas.height;
@@ -212,7 +240,7 @@ console.log(err);
         };
     };
 
-    spawnPlayer(){
+    spawnPlayer() {
         this.player = playerCreate.create(this);
         this.player.play("ship_1_idle");
     }
@@ -224,29 +252,14 @@ console.log(err);
         this.playerMovement();
 
         this.background.tilePositionY -= 0.5;
-        
+
         this.physics.add.collider(this.spaceship, this.shots, this.hitBonusShip, null, this);
         this.physics.add.collider(this.player, this.powerup, this.grantMissiles, null, this);
-
-
-
-
-
-        /* if (Phaser.Input.Keyboard.JustDown(this.spacebar)) {
-            if (this.player.active) {
-                this.shootLaser();
-            }
-        } */
-
-        //for (var i = 0; i < this.projectiles.getChildren().length; i++) {
-        //    var shot = this.projectiles.getChildren()[i];
-        //    shot.update();
-        //}
-
-        //this.enemyMovement();
+        
+        
 
     }
-    
+
 
     playerMovement() {
 
@@ -254,7 +267,7 @@ console.log(err);
             this.player.setVelocityX(-gameSettings.playerSpeed);
         } else if (this.cursorKeys.right.isDown) {
             this.player.setVelocityX(gameSettings.playerSpeed);
-        }else if (this.cursorKeys.left.isUp || this.cursorKeys.right.isUp) {
+        } else if (this.cursorKeys.left.isUp || this.cursorKeys.right.isUp) {
             this.player.setVelocityX(0);
             this.player.setVelocityY(0);
         }
@@ -276,35 +289,86 @@ console.log(err);
 
     } */
 
-    fireMissile(e){
-
-                if (e.code == "ArrowDown" && this.player.missiles > 0) {
+    createMissile(){
         this.missileObject = this.physics.add.sprite(this.player.x, this.player.y - 28, "missile");
         this.missileObject.play("player_missile");
         this.missileObject.setInteractive();
-        this.missileObject.setVelocityY(-350);
-                }
+        this.missileObject.body.onWorldBounds = true;
+        return this.missileObject;
 
     }
-    shootLaser() {    
-        try {           
-                this.shots.fireShot(this.player.x, this.player.y - 28);
-                this.shotSound.play();
+
+    fireMissile(e) {
+        
+
+        if (e.code === "ArrowDown" && this.player.missiles > 0) {
+            this.player.missiles = this.player.missiles - 1;
+            this.completeMissile = this.createMissile();
+            this.missileDisplay.missileDeplete();
+            
+            this.completeMissile.setVelocityY(-400);
+
+            if(this.completeMissile.y < 0)
+            {
+                this.completeMissile.destroy();
+            }
+
+        }
+
+    }
+
+    
+
+
+    missileExplode(enemy, projectile) {
+
+        this.explosionLarge = new BigExplosion(this, enemy.x, enemy.y);
+
+
+        this.bigExplosionSound.play();
+
+
+        enemy.destroy();
+        projectile.destroy();
+        if (this.alienSettings.testAllAliensDead()) {
+
+            this.levelUp();
+        }
+
+    }
+
+    grantMissiles(player, pwup) {
+
+        player.missiles = player.missiles + 3;
+
+        this.missileDisplay.missileExpand();
+        this.powerupSound.play();
+
+        pwup.destroy();
+        //this.updateBombCount(player.missiles);
+
+    }
+
+
+    shootLaser() {
+        try {
+            this.shots.fireShot(this.player.x, this.player.y - 28);
+            this.shotSound.play();
         } catch (err) {
             console.log(err);
         }
     }
 
-    spawnSpaceShip(){
+    spawnSpaceShip() {
         this.spaceshipSound.play();
         this.spaceship = this.physics.add.sprite(-100, 30, "bonus_spaceship");
         this.spaceship.play("bonus_ship_idle");
         this.spaceship.setInteractive();
-        
+
         this.spaceship.setVelocityX(125);
         if (this.spaceship.x > 800) {
-			this.spaceship.destroy();
-		}
+            this.spaceship.destroy();
+        }
 
     }
 
@@ -318,55 +382,45 @@ console.log(err);
      } */
     hitEnemy(enemy, projectile) {
         if (this.state == 'stateRunning' && enemy.active && projectile.active) {
-            
-            var randomBonusNum = Math.floor(Math.random() * (21- 1)) + 1;
+
+            var randomBonusNum = Math.floor(Math.random() * (21 - 1)) + 1;
 
             this.enemyDeathSound.play();
             projectile.destroy();
             enemy.destroy();
-            if (randomBonusNum == 20){
-            this.bonusShipTrigger = this.time.delayedCall(this.delay, this.spawnSpaceShip());
+            if (randomBonusNum == 20) {
+                this.bonusShipTrigger = this.time.delayedCall(this.delay, this.spawnSpaceShip());
             }
             var explosion = new Explosion(this, enemy.x, enemy.y);
             this.scoreSettings.point();
-            if (this.alienSettings.testAllAliensDead()) {               
-                
+            if (this.alienSettings.testAllAliensDead()) {
+
                 this.levelUp();
             }
         }
     }
 
-    hitBonusShip(enemy, projectile){
+    hitBonusShip(enemy, projectile) {
         this.enemyDeathSound.play();
         projectile.destroy();
-        
-        
+
+
 
         this.powerup = this.physics.add.sprite(enemy.x, enemy.y, "missile_powerup");
         this.powerup.setVelocityY(200);
 
         if (this.powerup.y > 600) {
-			this.powerup.destroy();
+            this.powerup.destroy();
         }
-        
+
         var explosion = new Explosion(this, enemy.x, enemy.y);
         enemy.destroy();
 
-        
-    }
-
-    grantMissiles(player, pwup){
-
-        player.missiles = player.missiles + 3;
-        
-        this.missileDisplay.missileExpand();
-        this.powerupSound.play();
-
-        pwup.destroy();
-        //this.updateBombCount(player.missiles);
 
     }
+
     
+
 
     enemyContact(enemy, player) {
         if (this.state == 'stateRunning' && enemy.active) {
@@ -383,26 +437,28 @@ console.log(err);
     levelUp() {
         this.level++;
         this.stage++;
+        if (this.stage != 1 && ((this.stage % 3) === 0)) {
+
+            this.stageMusic.stop();
+            this.scene.start('bossLevel', { scoreSettings: this.scoreSettings, level: this.level, stage: this.stage, missile: this.player.missiles });
+            return;
+        }
         this.time.addEvent(
             { delay: 2000, callback: this.reloadenemies(), callbackScope: this });
-            if (this.stage != 1 && ((this.stage % 3)=== 0)){
-                
-                this.stageMusic.stop();
-                this.scene.start('bossLevel', {scoreSettings: this.scoreSettings, level: this.level, stage: this.stage, missile: this.player.missiles});
-            }
+       
     }
 
-    reloadenemies(){
-        
-        this.alienSettings.restart(this.level);
+    reloadenemies() {
 
+        this.alienSettings.restart(this.level);
+        
     }
 
     restart() {
-        if (this.state == 'stateRunning'){            
+        if (this.state == 'stateRunning') {
             this.scene.start('newGame');
         }
-        
+
     }
 
     gameover() {
@@ -434,7 +490,7 @@ console.log(err);
     restartGame() {
         this.state = 'stateRunning';
         this.level = 1;
-        this.stage = 1;        
+        this.stage = 1;
         this.data = null;
         this.scoreSettings.setHiScore();
 
@@ -449,26 +505,26 @@ console.log(err);
 
 
     touchEnemy() {
-        
-/* 
-            if (this.player.alpha < 1) {
-                return;
-            } */
-            this.playerDeathSound.play();
-            var explosion = new Explosion(this, this.player.x, this.player.y);
-            this.player.disableBody(true, true);
 
-             /* this.time.addEvent({
-                delay: 1000,
-                callback: this.resetPlayer,
-                callbackScope: this,
-                loop: false
-            }); */
- 
+        /* 
+                    if (this.player.alpha < 1) {
+                        return;
+                    } */
+        this.playerDeathSound.play();
+        var explosion = new Explosion(this, this.player.x, this.player.y);
+        this.player.disableBody(true, true);
 
-            //this.gameover();
+        /* this.time.addEvent({
+           delay: 1000,
+           callback: this.resetPlayer,
+           callbackScope: this,
+           loop: false
+       }); */
 
-        
+
+        //this.gameover();
+
+
     }
 
 
@@ -485,7 +541,7 @@ console.log(err);
         }
     }
 
-     resetPlayer() {
+    resetPlayer() {
         var x = config.width / 2 - 8;
         var y = config.height + 64;
         this.player.enableBody(true, x, y, true, true);
@@ -503,7 +559,7 @@ console.log(err);
             },
             callbackScope: this
         });
-    } 
+    }
 
 
     /* createEnemies() {

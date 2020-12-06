@@ -35,9 +35,9 @@
   }
 
   addColider(other, eventHandler, scene) {
-    scene.physics.add.overlap(this.aliens1, other, eventHandler, null, scene);
-    scene.physics.add.overlap(this.aliens2, other, eventHandler, null, scene);
-    scene.physics.add.overlap(this.aliens3, other, eventHandler, null, scene);
+    scene.physics.add.collider(this.aliens1, other, eventHandler, null, scene);
+    scene.physics.add.collider(this.aliens2, other, eventHandler, null, scene);
+    scene.physics.add.collider(this.aliens3, other, eventHandler, null, scene);
   }
 
   restart(level) {

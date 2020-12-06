@@ -2,18 +2,22 @@
 class Scene4 extends Phaser.Scene {
 
     init(data) {
-        if (data.scoreSettings != null) {
-            this.scoreSettingdata = data.scoreSettings;
-        }
-        if (data.level != null) {
-            this.levelData = data.level;
-        }
+        try {
+            if (data.scoreSettings !== null) {
+                this.scoreSettingdata = data.scoreSettings;
+            }
+            if (data.level !== null) {
+                this.levelData = data.level;
+            }
 
-        if (data.stage != null) {
-            this.stageData = data.stage;
-        }
-        if(data.missile != null){
-            this.missiledata = data.missile;
+            if (data.stage !== null) {
+                this.stageData = data.stage;
+            }
+            if (data.missile !== null) {
+                this.missiledata = data.missile;
+            }
+        } catch (err) {
+            console.log(err);
         }
     }
     constructor(config) {
@@ -50,6 +54,7 @@ class Scene4 extends Phaser.Scene {
         this.level = this.levelData;
         this.stage = this.stageData;
         this.player.missiles = this.missiledata;
+        this.missileObject;
 
 
         this.createVictoryText();
@@ -61,8 +66,9 @@ class Scene4 extends Phaser.Scene {
         this.shotSound = this.sound.add("lasershot");
         this.playerDeathSound = this.sound.add("playerDeath");
         this.enemyDeathSound = this.sound.add("enemyDeath");
+        this.powerupSound = this.sound.add("powerup");
+        this.bigExplosionSound = this.sound.add("bigExplosion");
         this.enemyHurtSound = this.sound.add("enemyHurt");
-        this.spaceshipSound = this.sound.add("spaceshipAlert");
 
         this.victorySound = this.sound.add("victory");
 
@@ -71,6 +77,7 @@ class Scene4 extends Phaser.Scene {
         this.cursorKeys = this.input.keyboard.createCursorKeys();
         this.spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.input.keyboard.on("keydown", this.handleKey, this);
+        this.input.keyboard.on("keydown", this.fireMissile, this);
 
         this.bossEnemy = this.physics.add.sprite(config.width / 2, 50, "boss");
         this.bossEnemy.enableBody = true;
@@ -101,14 +108,38 @@ class Scene4 extends Phaser.Scene {
 
 
         this.scoreSettings = new ScoreSettings(this);
-        if (this.scoreSettings.score != 0) {
-            this.scoreSettings = this.scoreSettingdata;
-        }
-        this.scoreSettings.print();
+          if (typeof this.scoreSettingdata !== "undefined") {
+            this.scoreSettings = new RetrieveScoreSettings(this, this.scoreSettingdata);
+            this.scoreSettings.print();
+        }  
+
+        
+        
+        this.physics.add.overlap(this.bossEnemy, this.player, this.gameover, null, this);
+        this.physics.add.overlap(this.shots, this.bossEnemy, this.hitEnemy, null, this);
+        
+        
+
+
+        
+
+        //this.scoreSettings.print();
         this.state = 'stateRunning';
+
+        this.missileDisplay = new MissileDisplay(this);
+        if(typeof this.missiledata !== "undefined"){
+            this.missileDisplay = new MissileDisplayCarryOver(this, this.missiledata);
+            this.missileDisplay.print();
+        }
+        this.missileDisplay.print();
+
+
+        
 
 
     }
+
+    
 
     createVictoryText() {
         const sizeY = this.game.canvas.height;
@@ -153,24 +184,9 @@ class Scene4 extends Phaser.Scene {
 
     touchEnemy() {
 
-        /* 
-                    if (this.player.alpha < 1) {
-                        return;
-                    } */
         this.playerDeathSound.play();
         var explosion = new Explosion(this, this.player.x, this.player.y);
         this.player.disableBody(true, true);
-
-        /* this.time.addEvent({
-           delay: 1000,
-           callback: this.resetPlayer,
-           callbackScope: this,
-           loop: false
-       }); */
-
-
-        //this.gameover();
-
 
     }
 
@@ -225,6 +241,51 @@ class Scene4 extends Phaser.Scene {
         this.restart();
     }
 
+    createMissile(){
+        this.missileObject = this.physics.add.sprite(this.player.x, this.player.y - 28, "missile");
+        this.missileObject.play("player_missile");
+        this.missileObject.setInteractive();
+        this.missileObject.body.onWorldBounds = true;
+        return this.missileObject;
+
+    }
+
+    fireMissile(e) {
+
+        if (e.code == "ArrowDown" && this.player.missiles > 0) {
+            this.player.missiles = this.player.missiles - 1;
+            this.completeMissile = this.createMissile();
+            this.missileDisplay.missileDeplete();
+            
+            this.completeMissile.setVelocityY(-400);
+
+            if(this.completeMissile.y < 0)
+            {
+                this.completeMissile.destroy();
+            }
+
+        }
+
+    }
+
+
+    missileExplode(enemy, projectile) {
+
+        this.explosionLarge = new BigExplosion(this, enemy.x, enemy.y);
+
+
+        this.bigExplosionSound.play();
+
+        this.bossEnemy.health = this.bossEnemy.health - 5;
+        this.scoreSettings.point();
+
+
+        this.enemyHurtSound.play();
+        projectile.destroy();
+        this.checkifDead(enemy);
+
+    }
+
     restart() {
         if (this.state == 'stateGameOver' || this.state == 'stateRunning') {
             this.scene.start('newGame');
@@ -263,18 +324,25 @@ class Scene4 extends Phaser.Scene {
             projectile.destroy();
             this.bossEnemy.health = this.bossEnemy.health - 1;
             this.scoreSettings.point();
-            console.log(this.bossEnemy.health);
-            if (this.bossEnemy.health === 0) {
-                var explosion = new Explosion(this, enemy.x, enemy.y);
-                this.enemyDeathSound.play();
-                enemy.destroy();
-                this.bossMusic.stop()
-                this.victorySound.play();
-                this.level = this.level - 1;
-                this.stage++;
-                this.gameWin();
-            }
+            this.checkifDead(enemy);
+            
         }
+    }
+
+    checkifDead(enemy){
+        if (this.bossEnemy.health <= 0) {
+            var explosion = new Explosion(this, enemy.x, enemy.y);
+            this.enemyDeathSound.play();
+            enemy.destroy();
+            this.bossMusic.stop()
+            this.victorySound.play();
+            this.level = this.level - 1;
+            this.stage++;
+            this.gameWin();
+        }else{
+            return;
+        }
+
     }
 
 
@@ -285,23 +353,10 @@ class Scene4 extends Phaser.Scene {
         this.playerMovement();
 
         this.background.tilePositionY -= 0.5;
-
-
-        /* if (Phaser.Input.Keyboard.JustDown(this.spacebar)) {
-            if (this.player.active) {
-                this.shootLaser();
-            }
-        } */
-
-        //for (var i = 0; i < this.projectiles.getChildren().length; i++) {
-        //    var shot = this.projectiles.getChildren()[i];
-        //    shot.update();
-        //}
-
-        //this.enemyMovement();
         
-        this.physics.add.overlap(this.bossEnemy, this.player, this.gameover, null, this);
-        this.physics.add.overlap(this.shots, this.bossEnemy, this.hitEnemy, null, this);
+        this.physics.add.collider(this.bossEnemy, this.completeMissile, this.missileExplode, null, this);
+
+        
 
 
 
@@ -318,6 +373,39 @@ class Scene4 extends Phaser.Scene {
         }
 
     }
+
+    
+    createMissile(){
+        this.missileObject = this.physics.add.sprite(this.player.x, this.player.y - 28, "missile");
+        this.missileObject.play("player_missile");
+        this.missileObject.setInteractive();
+        this.missileObject.body.onWorldBounds = true;
+        return this.missileObject;
+
+    }
+
+    fireMissile(e) {
+        
+
+        if (e.code === "ArrowDown" && this.player.missiles > 0) {
+            this.player.missiles = this.player.missiles - 1;
+            this.completeMissile = this.createMissile();
+            this.missileDisplay.missileDeplete();
+            
+            this.completeMissile.setVelocityY(-400);
+
+            if(this.completeMissile.y < 0)
+            {
+                this.completeMissile.destroy();
+            }
+
+        }
+
+    }
+
+    
+
+
     ready() {
         if (this.state == 'stateGameWon'){
             this.beginText.setVisible(true);

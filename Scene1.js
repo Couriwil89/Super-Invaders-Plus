@@ -16,6 +16,7 @@ class Scene1 extends Phaser.Scene {
         this.load.audio("enemyHurt", ["/assets/audio/enemyHurt.ogg"]);
         this.load.audio("spaceshipAlert", ["/assets/audio/spaceshipAlert.ogg"]);
         this.load.audio("powerup", ["/assets/audio/powerup.ogg"]);
+        this.load.audio("bigExplosion", ["/assets/audio/bigExplosion.ogg"]);
 
         this.load.audio("title", ["/assets/audio/title.ogg"]);
         this.load.audio("stage", ["/assets/audio/stage.ogg"]);
@@ -60,6 +61,11 @@ class Scene1 extends Phaser.Scene {
         this.load.spritesheet("explosion", "assets/spritesheets/explosion/explode.png",{
 			frameWidth: 16,
 			frameHeight: 16
+        });
+
+        this.load.spritesheet("bigExplosion", "assets/spritesheets/explosion/bigExplode.png",{
+			frameWidth: 96,
+			frameHeight: 96
         });
         
         this.load.spritesheet("missile", "assets/spritesheets/projectile/missile.png",{
@@ -183,6 +189,14 @@ class Scene1 extends Phaser.Scene {
 			frames: this.anims.generateFrameNumbers("explosion"),
 			frameRate: 60,
 			repeat: 0,
+			hideOnComplete: true
+        });
+
+        this.anims.create({
+			key: "bigExplode",
+			frames: this.anims.generateFrameNumbers("bigExplosion"),
+			frameRate: 20,
+			repeat: 1,
 			hideOnComplete: true
         });
         

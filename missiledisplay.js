@@ -12,9 +12,9 @@ function padding(s) {
         { fontSize: '20px',  fontFamily: 'Pixel', fill: "#ffffff" };
 
 
-      scene.add.text(700, 550, 'Bombs x ', missileConfig);
-      this.bombLabel = scene.add.text(700, 545, '');
-      this.bombNumText = scene.add.text(775, 540, '', missileNumConfig);   
+      scene.add.text(650, 550, 'Bombs x ', missileConfig);
+      this.bombLabel = scene.add.text(675, 545, '');
+      this.bombNumText = scene.add.text(750, 540, '', missileNumConfig);   
       this.missileNumber = 0;
 
 
@@ -39,4 +39,34 @@ function padding(s) {
         (this.missileNumber));
     }
   
+  }
+
+  class MissileDisplayCarryOver extends MissileDisplay {
+
+  
+      constructor(scene, missileNum) {
+        super(scene, missileNum);
+        
+        const missileNumConfig =
+        { fontSize: '32px',  fontFamily: 'Pixel', fill: "#ffffff" };
+        const missileConfig =
+          { fontSize: '20px',  fontFamily: 'Pixel', fill: "#ffffff" };
+  
+  
+        scene.add.text(650, 550, 'Bombs x ', missileConfig);
+        this.bombLabel = scene.add.text(675, 545, '');
+        this.bombNumText = scene.add.text(750, 540, '', missileNumConfig);   
+        this.missileNumber = missileNum;
+
+        
+  
+  
+      }
+
+      print() {
+        return this.bombNumText.setText(
+          (this.missileNumber));
+      }
+
+
   }
