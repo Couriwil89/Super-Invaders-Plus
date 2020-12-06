@@ -12,6 +12,9 @@ class Scene3 extends Phaser.Scene {
         if (data.stage != null) {
             this.stageData = data.stage;
         }
+        if(data.missile != null){
+            this.missiledata = data.missile;
+        }
     }catch(err){
 console.log(err);
     }
@@ -47,6 +50,14 @@ console.log(err);
 
 
     create() {
+        
+
+        this.background = this.add.tileSprite(0, 0, config.width, config.height, "stage1Screen");
+
+        this.background.setOrigin(0, 0);
+        
+        this.spawnPlayer();
+        this.powerup = null;
 
         this.createText();
 
@@ -55,25 +66,32 @@ console.log(err);
         }else{
             this.level = this.levelData;
         }
-        this.player = null;
+        
 
         if (this.stagedata == null || this.stagedata == undefined){
             this.stage = 1;
+        }else{
+            this.stage = this.stageData;
         }
 
-        this.background = this.add.tileSprite(0, 0, config.width, config.height, "stage1Screen");
+        if (this.missiledata == null || this.missiledata == undefined){
+            this.player.missiles = 0;
+        }else{
+            this.player.missiles = this.missiledata;
+        }
 
-        this.background.setOrigin(0, 0);
         this.shotSound = this.sound.add("lasershot");
         this.playerDeathSound = this.sound.add("playerDeath");
         this.enemyDeathSound = this.sound.add("enemyDeath");
         this.spaceshipSound = this.sound.add("spaceshipAlert");
+        this.powerupSound = this.sound.add("powerup");
 
         //player spawn
         //this.player = this.physics.add.sprite(config.width / 2 - 8, config.height - 64, "player");
         this.cursorKeys = this.input.keyboard.createCursorKeys();
         this.spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.input.keyboard.on("keydown", this.handleKey, this);
+        this.input.keyboard.on("keydown", this.fireMissile, this);
 
         //this.enemy1 = this.add.sprite(config.width / 2 - 8, config.height - 500, "enemy1");
 
@@ -83,7 +101,6 @@ console.log(err);
          this.enemyGroup.physicsBodyType = Phaser.Physics.ARCADE;
   */
         //this.enemies.add(this.enemy1);
-        this.spawnPlayer();
 
         
 
@@ -102,11 +119,6 @@ console.log(err);
 
 
         this.alienSettings = new AlienSettings(this, this.level);
-        this.physics.world.on('worldbounds', this.onWorldbounds, this);
-        this.alienSettings.addColider(this.shots, this.hitEnemy, this);
-        this.alienSettings.addColider(this.player, this.enemyContact, this);
-        this.physics.add.collider(this.bombs, this.player, this.bombHitEvent, null, this);
-
 
         this.scoreSettings = new ScoreSettings(this);
         if (this.scoreSettings.score != 0){
@@ -114,6 +126,9 @@ console.log(err);
         }
         this.scoreSettings.print();
         this.state = 'stateRunning';
+
+        this.missileDisplay = new MissileDisplay(this);
+        this.missileDisplay.print();
 
 
 
@@ -138,6 +153,12 @@ console.log(err);
 
 
 
+        this.physics.world.on('worldbounds', this.onWorldbounds, this);
+        
+        
+        this.alienSettings.addColider(this.shots, this.hitEnemy, this);
+        this.alienSettings.addColider(this.player, this.enemyContact, this);
+        this.physics.add.collider(this.bombs, this.player, this.bombHitEvent, null, this);
 
         //this.player.play("ship_1_idle");
         //this.player.setInteractive();
@@ -149,6 +170,9 @@ console.log(err);
 
 
         //this.createEnemies();
+        this.spawnSpaceShip();
+
+        this.delay = Phaser.Math.Between(10000,16000);
     }
 
     createText() {
@@ -200,6 +224,12 @@ console.log(err);
         this.playerMovement();
 
         this.background.tilePositionY -= 0.5;
+        
+        this.physics.add.collider(this.spaceship, this.shots, this.hitBonusShip, null, this);
+        this.physics.add.collider(this.player, this.powerup, this.grantMissiles, null, this);
+
+
+
 
 
         /* if (Phaser.Input.Keyboard.JustDown(this.spacebar)) {
@@ -215,10 +245,8 @@ console.log(err);
 
         //this.enemyMovement();
 
-
-
     }
-
+    
 
     playerMovement() {
 
@@ -230,7 +258,6 @@ console.log(err);
             this.player.setVelocityX(0);
             this.player.setVelocityY(0);
         }
-
     }
 
     /*  enemyMovement() {
@@ -249,23 +276,35 @@ console.log(err);
 
     } */
 
+    fireMissile(e){
 
-    /*  shootLaser() {
-         var shot = new Shot(this);
-         this.shotSound.play();
-     } */
-    shootLaser() {        
+                if (e.code == "ArrowDown" && this.player.missiles > 0) {
+        this.missileObject = this.physics.add.sprite(this.player.x, this.player.y - 28, "missile");
+        this.missileObject.play("player_missile");
+        this.missileObject.setInteractive();
+        this.missileObject.setVelocityY(-350);
+                }
 
-        try {
-           
+    }
+    shootLaser() {    
+        try {           
                 this.shots.fireShot(this.player.x, this.player.y - 28);
                 this.shotSound.play();
-            
-
         } catch (err) {
             console.log(err);
-
         }
+    }
+
+    spawnSpaceShip(){
+        this.spaceshipSound.play();
+        this.spaceship = this.physics.add.sprite(-100, 30, "bonus_spaceship");
+        this.spaceship.play("bonus_ship_idle");
+        this.spaceship.setInteractive();
+        
+        this.spaceship.setVelocityX(125);
+        if (this.spaceship.x > 800) {
+			this.spaceship.destroy();
+		}
 
     }
 
@@ -279,10 +318,15 @@ console.log(err);
      } */
     hitEnemy(enemy, projectile) {
         if (this.state == 'stateRunning' && enemy.active && projectile.active) {
+            
+            var randomBonusNum = Math.floor(Math.random() * (21- 1)) + 1;
 
             this.enemyDeathSound.play();
             projectile.destroy();
             enemy.destroy();
+            if (randomBonusNum == 20){
+            this.bonusShipTrigger = this.time.delayedCall(this.delay, this.spawnSpaceShip());
+            }
             var explosion = new Explosion(this, enemy.x, enemy.y);
             this.scoreSettings.point();
             if (this.alienSettings.testAllAliensDead()) {               
@@ -290,6 +334,37 @@ console.log(err);
                 this.levelUp();
             }
         }
+    }
+
+    hitBonusShip(enemy, projectile){
+        this.enemyDeathSound.play();
+        projectile.destroy();
+        
+        
+
+        this.powerup = this.physics.add.sprite(enemy.x, enemy.y, "missile_powerup");
+        this.powerup.setVelocityY(200);
+
+        if (this.powerup.y > 600) {
+			this.powerup.destroy();
+        }
+        
+        var explosion = new Explosion(this, enemy.x, enemy.y);
+        enemy.destroy();
+
+        
+    }
+
+    grantMissiles(player, pwup){
+
+        player.missiles = player.missiles + 3;
+        
+        this.missileDisplay.missileExpand();
+        this.powerupSound.play();
+
+        pwup.destroy();
+        //this.updateBombCount(player.missiles);
+
     }
     
 
@@ -313,7 +388,7 @@ console.log(err);
             if (this.stage != 1 && ((this.stage % 3)=== 0)){
                 
                 this.stageMusic.stop();
-                this.scene.start('bossLevel', {scoreSettings: this.scoreSettings, level: this.level, stage: this.stage});
+                this.scene.start('bossLevel', {scoreSettings: this.scoreSettings, level: this.level, stage: this.stage, missile: this.player.missiles});
             }
     }
 

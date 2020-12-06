@@ -6,7 +6,8 @@ class Alien extends Phaser.Physics.Arcade.Sprite {
   }
 
   activate(x, y) {
-    this.play("enemy_1_idle");
+    const randomNumber = Math.floor(Math.random() * (5 - 1)) + 1;
+    this.play("enemy_" + randomNumber +"_idle");
     this.setCollideWorldBounds(true);
     this.body.onWorldBounds = true;
     this.enableBody(true, x, y, true, true);

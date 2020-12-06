@@ -12,6 +12,9 @@ class Scene4 extends Phaser.Scene {
         if (data.stage != null) {
             this.stageData = data.stage;
         }
+        if(data.missile != null){
+            this.missiledata = data.missile;
+        }
     }
     constructor(config) {
         super('bossLevel');
@@ -36,21 +39,25 @@ class Scene4 extends Phaser.Scene {
         this.bossMusic.play();
     }
     create() {
+        
+        
+        this.background = this.add.tileSprite(0, 0, config.width, config.height, "stageBScreen");
+
+        this.background.setOrigin(0, 0);
+
+        this.spawnPlayer();
 
         this.level = this.levelData;
         this.stage = this.stageData;
+        this.player.missiles = this.missiledata;
 
 
         this.createVictoryText();
         this.createDefeatText();
 
-        this.player = null;
 
 
 
-        this.background = this.add.tileSprite(0, 0, config.width, config.height, "stageBScreen");
-
-        this.background.setOrigin(0, 0);
         this.shotSound = this.sound.add("lasershot");
         this.playerDeathSound = this.sound.add("playerDeath");
         this.enemyDeathSound = this.sound.add("enemyDeath");
@@ -82,7 +89,6 @@ class Scene4 extends Phaser.Scene {
          this.enemyGroup.physicsBodyType = Phaser.Physics.ARCADE;
   */
         //this.enemies.add(this.enemy1);
-        this.spawnPlayer();
 
 
         this.shots = new Shots(this);
@@ -93,8 +99,6 @@ class Scene4 extends Phaser.Scene {
             runChildUpdate: true
         });
 
-        this.physics.add.overlap(this.bossEnemy, this.player, this.gameover, null, this);
-        this.physics.add.overlap(this.shots, this.bossEnemy, this.hitEnemy, null, this);
 
         this.scoreSettings = new ScoreSettings(this);
         if (this.scoreSettings.score != 0) {
@@ -233,7 +237,7 @@ class Scene4 extends Phaser.Scene {
 
     continueGame() {
         if (this.state == 'stateGameWon') {
-            this.scene.start('newGame', { scoreSettings: this.scoreSettings, level: this.level, stage: this.stage });
+            this.scene.start('newGame', { scoreSettings: this.scoreSettings, level: this.level, stage: this.stage, missile: this.player.missiles });
         }
         if (alienSettings != undefined || alienSettings != null) {
             this.alienSettings.restart(this.level);
@@ -295,6 +299,9 @@ class Scene4 extends Phaser.Scene {
         //}
 
         //this.enemyMovement();
+        
+        this.physics.add.overlap(this.bossEnemy, this.player, this.gameover, null, this);
+        this.physics.add.overlap(this.shots, this.bossEnemy, this.hitEnemy, null, this);
 
 
 

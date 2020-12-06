@@ -15,6 +15,7 @@ class Scene1 extends Phaser.Scene {
         this.load.audio("enemyDeath", ["/assets/audio/enemyExplosion.ogg"]);
         this.load.audio("enemyHurt", ["/assets/audio/enemyHurt.ogg"]);
         this.load.audio("spaceshipAlert", ["/assets/audio/spaceshipAlert.ogg"]);
+        this.load.audio("powerup", ["/assets/audio/powerup.ogg"]);
 
         this.load.audio("title", ["/assets/audio/title.ogg"]);
         this.load.audio("stage", ["/assets/audio/stage.ogg"]);
@@ -74,6 +75,12 @@ class Scene1 extends Phaser.Scene {
         this.load.spritesheet("boss", "assets/spritesheets/enemy/boss/boss.png",{
             frameWidth: 256,
             frameHeight: 128
+        });
+
+
+        this.load.spritesheet("missile_powerup", "assets/spritesheets/powerups/missiles_pwup.png",{
+            frameWidth: 16,
+            frameHeight: 16
         });
 
 
@@ -145,6 +152,13 @@ class Scene1 extends Phaser.Scene {
         this.anims.create({
             key: "boss_idle",
             frames: this.anims.generateFrameNumbers("boss"),
+            frameRate: 60,
+            repeat: -1
+        });
+
+        this.anims.create({
+            key: "missile_upgrade",
+            frames: this.anims.generateFrameNumbers("missile_powerup"),
             frameRate: 60,
             repeat: -1
         });
