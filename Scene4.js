@@ -1,13 +1,28 @@
+
 class Scene4 extends Phaser.Scene {
 
+    init(data) {
+        if (data.scoreSettings != null) {
+            this.scoreSettingdata = data.scoreSettings;
+        }
+        if (data.level != null) {
+            this.levelData = data.level;
+        }
+
+        if (data.stage != null) {
+            this.stageData = data.stage;
+        }
+    }
     constructor(config) {
         super('bossLevel');
+
     }
 
 
-    preload(){
 
-        var musicConfig ={
+    preload() {
+
+        var musicConfig = {
             mute: false,
             volume: 1,
             rate: 1,
@@ -21,12 +36,17 @@ class Scene4 extends Phaser.Scene {
         this.bossMusic.play();
     }
     create() {
-        
+
+        this.level = this.levelData;
+        this.stage = this.stageData;
+
 
         this.createVictoryText();
         this.createDefeatText();
 
         this.player = null;
+
+
 
         this.background = this.add.tileSprite(0, 0, config.width, config.height, "stageBScreen");
 
@@ -36,7 +56,7 @@ class Scene4 extends Phaser.Scene {
         this.enemyDeathSound = this.sound.add("enemyDeath");
         this.enemyHurtSound = this.sound.add("enemyHurt");
         this.spaceshipSound = this.sound.add("spaceshipAlert");
-        
+
         this.victorySound = this.sound.add("victory");
 
         //player spawn
@@ -45,7 +65,7 @@ class Scene4 extends Phaser.Scene {
         this.spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.input.keyboard.on("keydown", this.handleKey, this);
 
-        this.bossEnemy = this.physics.add.sprite(config.width/2, 50, "boss");
+        this.bossEnemy = this.physics.add.sprite(config.width / 2, 50, "boss");
         this.bossEnemy.enableBody = true;
         this.bossEnemy.physicsBodyType = Phaser.Physics.ARCADE;
         this.bossEnemy.setBounceX(1);
@@ -64,7 +84,7 @@ class Scene4 extends Phaser.Scene {
         //this.enemies.add(this.enemy1);
         this.spawnPlayer();
 
-        
+
         this.shots = new Shots(this);
 
         this.bombs = this.physics.add.group({
@@ -76,8 +96,10 @@ class Scene4 extends Phaser.Scene {
         this.physics.add.overlap(this.bossEnemy, this.player, this.gameover, null, this);
         this.physics.add.overlap(this.shots, this.bossEnemy, this.hitEnemy, null, this);
 
-
         this.scoreSettings = new ScoreSettings(this);
+        if (this.scoreSettings.score != 0) {
+            this.scoreSettings = this.scoreSettingdata;
+        }
         this.scoreSettings.print();
         this.state = 'stateRunning';
 
@@ -122,39 +144,42 @@ class Scene4 extends Phaser.Scene {
         this.beginText.setOrigin(0.5);
     }
 
+
+
+
     touchEnemy() {
-        
+
         /* 
                     if (this.player.alpha < 1) {
                         return;
                     } */
-                    this.playerDeathSound.play();
-                    var explosion = new Explosion(this, this.player.x, this.player.y);
-                    this.player.disableBody(true, true);
-        
-                     /* this.time.addEvent({
-                        delay: 1000,
-                        callback: this.resetPlayer,
-                        callbackScope: this,
-                        loop: false
-                    }); */
-         
-        
-                    //this.gameover();
-        
-                
-            }
+        this.playerDeathSound.play();
+        var explosion = new Explosion(this, this.player.x, this.player.y);
+        this.player.disableBody(true, true);
 
-    spawnPlayer(){
+        /* this.time.addEvent({
+           delay: 1000,
+           callback: this.resetPlayer,
+           callbackScope: this,
+           loop: false
+       }); */
+
+
+        //this.gameover();
+
+
+    }
+
+    spawnPlayer() {
         this.player = playerCreate.create(this);
     }
 
-    shootLaser() {        
+    shootLaser() {
 
         try {
-           
-                this.shots.fireShot(this.player.x, this.player.y - 28);
-            
+
+            this.shots.fireShot(this.player.x, this.player.y - 28);
+
 
         } catch (err) {
             console.log(err);
@@ -173,12 +198,18 @@ class Scene4 extends Phaser.Scene {
             case 'stateReady':
                 this.restartGame();
                 break;
+
+            case 'stateGameWon':
+                this.newGamePlus();
+                break;
         }
     }
 
     restartGame() {
         this.state = 'stateRunning';
         this.level = 1;
+        this.stage = 1;
+        this.data = null;
         this.scoreSettings.setHiScore();
 
         this.player.play('ship_1_idle');
@@ -191,16 +222,35 @@ class Scene4 extends Phaser.Scene {
     }
 
     restart() {
-        if (this.state == 'stateGameOver' || this.state =='stateRunning'){
+        if (this.state == 'stateGameOver' || this.state == 'stateRunning') {
             this.scene.start('newGame');
-            }
-            if(alienSettings != undefined || alienSettings != null ){
-        this.alienSettings.restart(this.level);
-            }
+        }
+        if (alienSettings != undefined || alienSettings != null) {
+            this.alienSettings.restart(this.level);
+        }
 
-       
-        
     }
+
+    continueGame() {
+        if (this.state == 'stateGameWon') {
+            this.scene.start('newGame', { scoreSettings: this.scoreSettings, level: this.level, stage: this.stage });
+        }
+        if (alienSettings != undefined || alienSettings != null) {
+            this.alienSettings.restart(this.level);
+        }
+    }
+
+    newGamePlus() {
+        this.scoreSettings.setHiScore();
+        this.player.play('ship_1_idle');
+        this.beginText.setVisible(false);
+        this.gameoverText.setVisible(false);
+        this.bombs.getChildren().forEach(
+            function (bomb) { bomb.destroy(); }
+        );
+        this.continueGame();
+    }
+
 
     hitEnemy(enemy, projectile) {
         if (this.state == 'stateRunning' && enemy.active && projectile.active) {
@@ -213,9 +263,11 @@ class Scene4 extends Phaser.Scene {
             if (this.bossEnemy.health === 0) {
                 var explosion = new Explosion(this, enemy.x, enemy.y);
                 this.enemyDeathSound.play();
-                enemy.destroy();                      
-                this.bossMusic.stop() 
-                this.victorySound.play();;
+                enemy.destroy();
+                this.bossMusic.stop()
+                this.victorySound.play();
+                this.level = this.level - 1;
+                this.stage++;
                 this.gameWin();
             }
         }
@@ -254,12 +306,16 @@ class Scene4 extends Phaser.Scene {
             this.player.setVelocityX(-gameSettings.playerSpeed);
         } else if (this.cursorKeys.right.isDown) {
             this.player.setVelocityX(gameSettings.playerSpeed);
-        }else if (this.cursorKeys.left.isUp || this.cursorKeys.right.isUp ) {
+        } else if (this.cursorKeys.left.isUp || this.cursorKeys.right.isUp) {
             this.player.setVelocityX(0);
         }
 
     }
     ready() {
+        if (this.state == 'stateGameWon'){
+            this.beginText.setVisible(true);
+            return;
+        }
         this.state = 'stateReady'
         this.beginText.setVisible(true);
     }
@@ -285,7 +341,7 @@ class Scene4 extends Phaser.Scene {
     }
 
     gameWin() {
-        this.state = 'stateGameOver';
+        this.state = 'stateGameWon';
         this.time.removeAllEvents();
         this.bossMusic.stop();
         this.shots.getChildren().forEach(
@@ -297,7 +353,7 @@ class Scene4 extends Phaser.Scene {
 
         this.time.addEvent({
             delay: 3000,
-            callback: this.ready(),
+            callback: function () { this.ready(); },
             callbackScope: this
         });
     }

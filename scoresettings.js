@@ -28,7 +28,7 @@ function padding(s) {
     }
   
     print() {
-      this.scoreText.setText(
+      return this.scoreText.setText(
         padding(this.score) + '     ' + padding(this.hiScore)
       );
     }

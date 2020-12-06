@@ -1,5 +1,22 @@
 class Scene3 extends Phaser.Scene {
 
+    init (data)
+    {try{
+        if (data.scoreSettings != null){
+            this.scoreSettingdata = data.scoreSettings;
+        }
+        if (data.level != null){
+            this.levelData = data.level;
+        }
+
+        if (data.stage != null) {
+            this.stageData = data.stage;
+        }
+    }catch(err){
+console.log(err);
+    }
+      }
+
     constructor(config) {
         super('newGame');
     }
@@ -33,8 +50,16 @@ class Scene3 extends Phaser.Scene {
 
         this.createText();
 
-        this.level = 1;
+        if (this.levelData == null || this.levelData == undefined){
+            this.level = 1;
+        }else{
+            this.level = this.levelData;
+        }
         this.player = null;
+
+        if (this.stagedata == null || this.stagedata == undefined){
+            this.stage = 1;
+        }
 
         this.background = this.add.tileSprite(0, 0, config.width, config.height, "stage1Screen");
 
@@ -84,6 +109,9 @@ class Scene3 extends Phaser.Scene {
 
 
         this.scoreSettings = new ScoreSettings(this);
+        if (this.scoreSettings.score != 0){
+            this.scoreSettings = this.scoreSettingdata;
+        }
         this.scoreSettings.print();
         this.state = 'stateRunning';
 
@@ -263,6 +291,7 @@ class Scene3 extends Phaser.Scene {
             }
         }
     }
+    
 
     enemyContact(enemy, player) {
         if (this.state == 'stateRunning' && enemy.active) {
@@ -271,25 +300,25 @@ class Scene3 extends Phaser.Scene {
     }
 
     bombHitEvent(bomb, player) {
-        if (this.state == 'stateRunning' && bomb.active) {
+        if (this.state == 'stateRunning') {
             this.gameover();
         }
     }
 
     levelUp() {
         this.level++;
-        console.log(this.level);
+        this.stage++;
         this.time.addEvent(
             { delay: 2000, callback: this.reloadenemies(), callbackScope: this });
-            if (this.level === 3){
+            if (this.stage != 1 && ((this.stage % 3)=== 0)){
                 
                 this.stageMusic.stop();
-                this.scene.start('bossLevel', this.player, this.scene, this.scoreSettings);
+                this.scene.start('bossLevel', {scoreSettings: this.scoreSettings, level: this.level, stage: this.stage});
             }
     }
 
     reloadenemies(){
-
+        
         this.alienSettings.restart(this.level);
 
     }
@@ -330,6 +359,8 @@ class Scene3 extends Phaser.Scene {
     restartGame() {
         this.state = 'stateRunning';
         this.level = 1;
+        this.stage = 1;        
+        this.data = null;
         this.scoreSettings.setHiScore();
 
         this.player.play('ship_1_idle');
